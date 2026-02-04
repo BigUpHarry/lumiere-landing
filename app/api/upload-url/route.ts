@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const REGION = process.env.S3_REGION;
@@ -18,7 +18,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const files = Array.isArray(body.files) ? body.files : [];
-    const expiresIn = typeof body.expiresIn === 'number' ? body.expiresIn : 900;
+    const putExpiresIn = typeof body.putExpiresIn === 'number' ? body.putExpiresIn : 900;
+    const getExpiresIn = typeof body.getExpiresIn === 'number' ? body.getExpiresIn : 3600;
 
     const results = await Promise.all(
       files.map(async (f: { name: string; type?: string }) => {
@@ -26,17 +27,19 @@ export async function POST(req: Request) {
         const safeName = f.name ? f.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'file';
         const key = `uploads/${timestamp}_${Math.random().toString(36).slice(2, 8)}_${safeName}`;
 
-        const cmd = new PutObjectCommand({
+        const putCmd = new PutObjectCommand({
           Bucket: BUCKET,
           Key: key,
           ContentType: f.type || 'application/octet-stream',
         });
+        const putUrl = await getSignedUrl(s3, putCmd, { expiresIn: putExpiresIn });
 
-        const url = await getSignedUrl(s3, cmd, { expiresIn });
+        const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+        const getUrl = await getSignedUrl(s3, getCmd, { expiresIn: getExpiresIn });
 
         const publicUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
 
-        return { url, publicUrl, key };
+        return { key, putUrl, getUrl, publicUrl };
       })
     );
 
