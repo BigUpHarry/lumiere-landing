@@ -33,7 +33,7 @@ export default function ContactForm() {
     await Promise.all(
       results.map(async (r: any, idx: number) => {
         const file = fileArray[idx];
-        await fetch(r.url, {
+        await fetch(r.putUrl, {
           method: 'PUT',
           headers: {
             'Content-Type': file.type || 'application/octet-stream',
@@ -43,7 +43,8 @@ export default function ContactForm() {
       })
     );
 
-    const filePublicUrls = results.map((r: any) => r.publicUrl);
+    // Use the presigned GET URLs so Make (or server) can download private objects
+    const fileUrls = results.map((r: any) => r.getUrl);
 
     setStatus('Submitting form...');
     const contactResp = await fetch('/api/contact', {
@@ -54,8 +55,7 @@ export default function ContactForm() {
         email,
         hotel,
         message,
-        fileUrls: filePublicUrls,
-        // If you use MAKE_WEBHOOK_SECRET, set NEXT_PUBLIC_MAKE_WEBHOOK_SECRET in Vercel
+        fileUrls,
         secret: (process.env.NEXT_PUBLIC_MAKE_WEBHOOK_SECRET as string) || undefined,
       }),
     });
