@@ -18,8 +18,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const files = Array.isArray(body.files) ? body.files : [];
-    const putExpiresIn = typeof body.putExpiresIn === 'number' ? body.putExpiresIn : 900;
-    const getExpiresIn = typeof body.getExpiresIn === 'number' ? body.getExpiresIn : 3600;
+    const putExpiresIn = typeof body.putExpiresIn === 'number' ? body.putExpiresIn : 900; // seconds
+    const getExpiresIn = typeof body.getExpiresIn === 'number' ? body.getExpiresIn : 3600; // seconds
 
     const results = await Promise.all(
       files.map(async (f: { name: string; type?: string }) => {
